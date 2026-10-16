@@ -1,50 +1,38 @@
-// register.js
-// Usage: node register.js
-// Reads TOKEN, CLIENT_ID and optional GUILD_ID from .env and registers the commands.
-// If GUILD_ID is present, registers to that guild (instant). Otherwise registers globally (may take up to 1 hour).
+import 'dotenv/config';
+import { REST, Routes, SlashCommandBuilder } from 'discord.js';
 
-const { REST } = require('@discordjs/rest');
-const { Routes } = require('discord-api-types/v10');
-require('dotenv').config();
+const { DISCORD_TOKEN, CLIENT_ID, GUILD_ID } = process.env;
 
-const token = process.env.TOKEN;
-const clientId = process.env.CLIENT_ID;
-const guildId = process.env.GUILD_ID;
-
-if (!token || !clientId) {
-  console.error('Missing TOKEN or CLIENT_ID in .env');
-  process.exit(1);
+if (!DISCORD_TOKEN || !CLIENT_ID || !GUILD_ID) {
+  throw new Error('تأكد من إعداد DISCORD_TOKEN وCLIENT_ID وGUILD_ID.');
 }
 
-// Define commands here
 const commands = [
-  {
-    name: 'ping',
-    description: 'Replies with Pong!'
-  }
+  new SlashCommandBuilder()
+    .setName('ping')
+    .setDescription('يعرض حالة استجابة البوت'),
+
+  new SlashCommandBuilder()
+    .setName('say')
+    .setDescription('يجعل البوت يرسل نصًا في القناة')
+    .addStringOption(option =>
+      option
+        .setName('text')
+        .setDescription('النص المراد إرساله')
+        .setRequired(true)
+        .setMaxLength(500)
+    )
 ];
 
-(async () => {
-  try {
-    const rest = new REST({ version: '10' }).setToken(token);
+const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 
-    if (guildId) {
-      console.log(`Registering ${commands.length} command(s) to guild ${guildId}...`);
-      await rest.put(
-        Routes.applicationGuildCommands(clientId, guildId),
-        { body: commands }
-      );
-      console.log('Successfully registered guild commands.');
-    } else {
-      console.log(`Registering ${commands.length} global command(s)... (may take up to 1 hour)`);
-      await rest.put(
-        Routes.applicationCommands(clientId),
-        { body: commands }
-      );
-      console.log('Successfully registered global commands.');
-    }
-  } catch (error) {
-    console.error('Failed to register commands:', error);
-    process.exit(1);
-  }
-})();
+try {
+  await rest.put(
+    Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+    { body: commands.map(command => command.toJSON()) }
+  );
+
+  console.log('تم تسجيل أوامر الخادم التجريبي.');
+} catch (error) {
+  console.error('فشل تسجيل الأوامر:', error);
+}
